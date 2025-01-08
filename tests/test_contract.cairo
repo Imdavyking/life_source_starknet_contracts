@@ -1,5 +1,8 @@
 use life_source::erc20::IERC20DispatcherTrait;
-use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
+use snforge_std::{
+    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address,
+    stop_cheat_caller_address,
+};
 use life_source::{ILifeSourceManagerDispatcher, ILifeSourceManagerDispatcherTrait};
 use life_source::erc20::IERC20Dispatcher;
 use starknet::ContractAddress;
@@ -45,12 +48,14 @@ fn redeem_code() {
 
     let dispatcher = ILifeSourceManagerDispatcher { contract_address };
     let erc_instance = IERC20Dispatcher { contract_address: dispatcher.token_address() };
-    let user: ContractAddress = starknet::contract_address_const::<'OWNER'>();
+    let user: ContractAddress = starknet::contract_address_const::<'USER'>();
+    start_cheat_caller_address(contract_address, user);
     dispatcher.add_point_from_weight(100);
 
     dispatcher.redeem_code(100);
     let balance_of_user = erc_instance.balance_of(user);
     let user_ponts = dispatcher.get_user_points();
+    stop_cheat_caller_address(contract_address);
     assert(balance_of_user == 100000000000000000000, 'balance wrongly set');
     assert(user_ponts == 3400, 'Invalid points');
 }
