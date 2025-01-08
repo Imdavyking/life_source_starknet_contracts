@@ -1,6 +1,24 @@
+use life_source::erc20::IERC20DispatcherTrait;
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
-use my_project::{ILifeSourceManagerDispatcher, ILifeSourceManagerDispatcherTrait};
+use life_source::{ILifeSourceManagerDispatcher, ILifeSourceManagerDispatcherTrait};
+use life_source::erc20::IERC20Dispatcher;
+use starknet::ContractAddress;
 
+#[test]
+fn lifesource_manager_is_token_owner() {
+    let erc20_contract = declare("ERC20").unwrap().contract_class();
+    let mut constructor_calldata = ArrayTrait::new();
+    erc20_contract.class_hash.serialize(ref constructor_calldata);
+    let contract = declare("LifeSourceManager").unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+
+    let dispatcher = ILifeSourceManagerDispatcher { contract_address };
+    let erc_instance = IERC20Dispatcher { contract_address: dispatcher.token_address() };
+    assert(erc_instance.owner() == contract_address, 'invalid owner');
+    assert(erc_instance.name() == "LifeSourceToken", 'invalid name');
+    assert(erc_instance.symbol() == "LFT", 'invalid symbol');
+    assert(erc_instance.decimals() == 18, 'invalid decimals');
+}
 
 #[test]
 fn test_add_point_from_weight() {
@@ -11,7 +29,7 @@ fn test_add_point_from_weight() {
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let dispatcher = ILifeSourceManagerDispatcher { contract_address };
-    dispatcher.add_point_from_weight(42);
+    dispatcher.add_point_from_weight(100);
 
     let user_ponts = dispatcher.get_user_points();
 
@@ -26,11 +44,14 @@ fn redeem_code() {
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let dispatcher = ILifeSourceManagerDispatcher { contract_address };
+    let erc_instance = IERC20Dispatcher { contract_address: dispatcher.token_address() };
+    let user: ContractAddress = starknet::contract_address_const::<'OWNER'>();
+    dispatcher.add_point_from_weight(100);
 
-    dispatcher.add_point_from_weight(42);
-
+    dispatcher.redeem_code(100);
+    let balance_of_user = erc_instance.balance_of(user);
     let user_ponts = dispatcher.get_user_points();
-
-    assert(user_ponts == 3500, 'Invalid points');
+    assert(balance_of_user == 100000000000000000000, 'balance wrongly set');
+    assert(user_ponts == 3400, 'Invalid points');
 }
 

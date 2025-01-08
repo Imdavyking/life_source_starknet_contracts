@@ -18,6 +18,7 @@ pub trait IERC20<TContractState> {
         ref self: TContractState, spender: ContractAddress, subtracted_value: u256,
     );
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+    fn owner(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -156,6 +157,10 @@ pub mod ERC20 {
             self.emit(Transfer { from: zero_address, to: recipient, value: amount });
 
             true
+        }
+
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner.read()
         }
     }
 

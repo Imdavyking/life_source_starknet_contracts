@@ -2,7 +2,7 @@
 version = 1
 
 [[package]]
-name = "my_project"
+name = "life_source"
 version = "0.1.0"
 dependencies = [
  "pragma_lib",

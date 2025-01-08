@@ -12,6 +12,8 @@ pub trait ILifeSourceManager<TContractState> {
     fn get_token_price(self: @TContractState, token: ContractAddress) -> u256;
     /// Get user points.
     fn get_user_points(self: @TContractState) -> u256;
+    /// Get the token address.
+    fn token_address(self: @TContractState) -> ContractAddress;
 }
 
 
@@ -26,12 +28,11 @@ mod LifeSourceManager {
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, contract_address_const, ClassHash,
     };
-    use snforge_std::declare;
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
     use pragma_lib::types::{DataType, PragmaPricesResponse};
-    use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait, erc20::ERC20};
+    use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait};
 
     #[storage]
     struct Storage {
@@ -154,6 +155,10 @@ mod LifeSourceManager {
             let user = get_caller_address();
             let point_data = self.user_points.entry(user).read();
             point_data.points
+        }
+
+        fn token_address(self: @ContractState) -> ContractAddress {
+            self.token_address.read()
         }
     }
 }
