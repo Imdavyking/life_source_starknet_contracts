@@ -52,6 +52,16 @@ pub mod ERC20 {
         owner: ContractAddress,
     }
 
+    /// Errors
+    pub mod Errors {
+        pub const ERC20_ONLY_OWNER_CAN_MINT: felt252 = 'only owner can mint';
+        pub const LifeSourceManager_MAX_SUPPLY_EXCEEDED: felt252 = 'max supply exceeded';
+        pub const LifeSourceManager_TRANSFER_FROM_ZERO: felt252 = 'transfer from 0';
+        pub const LifeSourceManager_TRANSFER_TO_ZERO: felt252 = 'transfer to 0';
+        pub const LifeSourceManager_APPROVE_FROM_ZERO: felt252 = 'approve from 0';
+        pub const LifeSourceManager_APPROVE_TO_ZERO: felt252 = 'approve to 0';
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -181,8 +191,8 @@ pub mod ERC20 {
 
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             let caller = get_caller_address();
-            assert(caller == self.owner.read(), 'only owner can mint');
-            assert(self.total_supply.read() + amount <= MAX_SUPPLY, 'max supply exceeded');
+            assert(caller == self.owner.read(), Errors::ERC20_ONLY_OWNER_CAN_MINT);
+            assert(self.total_supply.read() + amount <= MAX_SUPPLY);
             let previous_total_supply = self.total_supply.read();
             let previous_balance = self.balances.read(recipient);
 
@@ -210,8 +220,8 @@ pub mod ERC20 {
             recipient: ContractAddress,
             amount: u256,
         ) {
-            assert(!sender.is_zero(), 'transfer from 0');
-            assert(!recipient.is_zero(), 'transfer to 0');
+            assert(!sender.is_zero(), Errors::LifeSourceManager_TRANSFER_FROM_ZERO);
+            assert(!recipient.is_zero(), Errors::LifeSourceManager_TRANSFER_TO_ZERO);
 
             self.balances.entry(sender).write(self.balances.read(sender) - amount);
             self.balances.entry(recipient).write(self.balances.read(recipient) + amount);
@@ -222,8 +232,8 @@ pub mod ERC20 {
         fn approve_helper(
             ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256,
         ) {
-            assert(!owner.is_zero(), 'approve from 0');
-            assert(!spender.is_zero(), 'approve to 0');
+            assert(!owner.is_zero(), Errors::LifeSourceManager_APPROVE_FROM_ZERO);
+            assert(!spender.is_zero(), Errors::LifeSourceManager_APPROVE_TO_ZERO);
 
             self.allowances.entry((owner, spender)).write(amount);
 
