@@ -17,6 +17,7 @@ snforge_std = "0.35.1"
 assert_macros = "2.9.2"
 
 [[target.starknet-contract]]
+casm = true
 sierra = true
 
 [scripts]
