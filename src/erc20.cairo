@@ -6,15 +6,24 @@ pub trait IERC20<TContractState> {
     fn symbol(self: @TContractState) -> ByteArray;
     fn decimals(self: @TContractState) -> u8;
     fn total_supply(self: @TContractState) -> u256;
+    fn totalSupply(self: @TContractState) -> u256;
     fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+    fn balanceOf(self: @TContractState, account: ContractAddress) -> u256;
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
     fn transfer_from(
         ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool;
+    fn transferFrom(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
+    ) -> bool;
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
     fn increase_allowance(ref self: TContractState, spender: ContractAddress, added_value: u256);
+    fn increaseAllowance(ref self: TContractState, spender: ContractAddress, added_value: u256);
     fn decrease_allowance(
+        ref self: TContractState, spender: ContractAddress, subtracted_value: u256,
+    );
+    fn decreaseAllowance(
         ref self: TContractState, spender: ContractAddress, subtracted_value: u256,
     );
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
@@ -90,8 +99,15 @@ pub mod ERC20 {
             self.total_supply.read()
         }
 
+        fn totalSupply(self: @ContractState) -> u256 {
+            self.total_supply()
+        }
+
         fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
             self.balances.read(account)
+        }
+        fn balanceOf(self: @ContractState, account: ContractAddress) -> u256 {
+            self.balance_of(account)
         }
 
         fn allowance(
@@ -118,6 +134,15 @@ pub mod ERC20 {
             return true;
         }
 
+        fn transferFrom(
+            ref self: ContractState,
+            sender: ContractAddress,
+            recipient: ContractAddress,
+            amount: u256,
+        ) -> bool {
+            self.transfer_from(sender, recipient, amount)
+        }
+
         fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
             let caller = get_caller_address();
             self.approve_helper(caller, spender, amount);
@@ -134,6 +159,10 @@ pub mod ERC20 {
                 );
         }
 
+        fn increaseAllowance(ref self: ContractState, spender: ContractAddress, added_value: u256) {
+            self.increase_allowance(spender, added_value)
+        }
+
         fn decrease_allowance(
             ref self: ContractState, spender: ContractAddress, subtracted_value: u256,
         ) {
@@ -143,6 +172,13 @@ pub mod ERC20 {
                     caller, spender, self.allowances.read((caller, spender)) - subtracted_value,
                 );
         }
+
+        fn decreaseAllowance(
+            ref self: ContractState, spender: ContractAddress, subtracted_value: u256,
+        ) {
+            self.decrease_allowance(spender, subtracted_value)
+        }
+
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'only owner can mint');
