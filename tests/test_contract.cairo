@@ -1,11 +1,7 @@
 use starknet::ContractAddress;
 
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
-
-use my_project::ILifeSourceManagerSafeDispatcher;
-use my_project::ILifeSourceManagerSafeDispatcherTrait;
-use my_project::ILifeSourceManagerDispatcher;
-use my_project::ILifeSourceManagerDispatcherTrait;
+use my_project::{ILifeSourceManagerDispatcher, ILifeSourceManagerDispatcherTrait};
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap().contract_class();
@@ -22,5 +18,6 @@ fn test_add_point_from_weight() {
     dispatcher.add_point_from_weight(42);
 
     let user_ponts = dispatcher.get_user_points();
+
     assert(user_ponts == 3500, 'Invalid points');
 }

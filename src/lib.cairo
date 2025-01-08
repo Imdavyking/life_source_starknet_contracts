@@ -1,5 +1,6 @@
-use starknet::ContractAddress;
 pub mod erc20;
+use starknet::ContractAddress;
+
 #[starknet::interface]
 pub trait ILifeSourceManager<TContractState> {
     /// Add points from the weight of the waste.
@@ -17,16 +18,17 @@ pub trait ILifeSourceManager<TContractState> {
 #[starknet::contract]
 mod LifeSourceManager {
     use core::num::traits::Pow;
-    use starknet::storage::StorageMapWriteAccess;
-    use starknet::storage::StoragePathEntry;
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
+    use starknet::storage::{
+        StoragePointerReadAccess, StoragePointerWriteAccess, Map, StorageMapWriteAccess,
+        StoragePathEntry,
+    };
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, contract_address_const,
     };
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
     use pragma_lib::types::{DataType, PragmaPricesResponse};
-    use erc20::IERC20Dispatcher;
+    use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait};
 
     #[storage]
     struct Storage {
