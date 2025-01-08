@@ -19,29 +19,8 @@ fn test_add_point_from_weight() {
 
     let dispatcher = ILifeSourceManagerDispatcher { contract_address };
 
-    let balance_before = dispatcher.get_balance();
-    assert(balance_before == 0, 'Invalid balance');
-
     dispatcher.add_point_from_weight(42);
 
-    let balance_after = dispatcher.get_balance();
-    assert(balance_after == 42, 'Invalid balance');
-}
-
-#[test]
-#[feature("safe_dispatcher")]
-fn test_cannot_increase_balance_with_zero_value() {
-    let contract_address = deploy_contract("LifeSourceManager");
-
-    let safe_dispatcher = ILifeSourceManagerSafeDispatcher { contract_address };
-
-    let balance_before = safe_dispatcher.get_balance().unwrap();
-    assert(balance_before == 0, 'Invalid balance');
-
-    match safe_dispatcher.increase_balance(0) {
-        Result::Ok(_) => core::panic_with_felt252('Should have panicked'),
-        Result::Err(panic_data) => {
-            assert(*panic_data.at(0) == 'Amount cannot be 0', *panic_data.at(0));
-        },
-    };
+    let user_ponts = dispatcher.get_user_points();
+    assert(user_ponts == 3500, 'Invalid points');
 }

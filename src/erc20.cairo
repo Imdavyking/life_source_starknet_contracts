@@ -22,6 +22,7 @@ pub trait IERC20<TContractState> {
 
 #[starknet::contract]
 pub mod ERC20 {
+    use starknet::storage::StoragePathEntry;
     use starknet::storage::StorageMapReadAccess;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
@@ -147,6 +148,7 @@ pub mod ERC20 {
             let previous_balance = self.balances.read(recipient);
 
             self.total_supply.write(previous_total_supply + amount);
+
             self.balances.entry(recipient).write(previous_balance + amount);
 
             let zero_address = Zero::zero();
@@ -168,8 +170,8 @@ pub mod ERC20 {
             assert(!sender.is_zero(), 'transfer from 0');
             assert(!recipient.is_zero(), 'transfer to 0');
 
-            self.balances.write(sender, self.balances.read(sender) - amount);
-            self.balances.write(recipient, self.balances.read(recipient) + amount);
+            self.balances.entry(sender).write(self.balances.read(sender) - amount);
+            self.balances.entry(recipient).write(self.balances.read(recipient) + amount);
 
             self.emit(Transfer { from: sender, to: recipient, value: amount });
         }
@@ -180,7 +182,7 @@ pub mod ERC20 {
             assert(!owner.is_zero(), 'approve from 0');
             assert(!spender.is_zero(), 'approve to 0');
 
-            self.allowances.write((owner, spender), amount);
+            self.allowances.entry((owner, spender)).write(amount);
 
             self.emit(Approval { owner, spender, value: amount })
         }

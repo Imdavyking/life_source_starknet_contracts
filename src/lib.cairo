@@ -26,6 +26,7 @@ mod LifeSourceManager {
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
     use pragma_lib::types::{DataType, PragmaPricesResponse};
+    use erc20::IERC20Dispatcher;
 
     #[storage]
     struct Storage {
@@ -116,9 +117,10 @@ mod LifeSourceManager {
 
             let amount_to_mint = points_to_redeem
                 * 10.pow(18).try_into().unwrap(); // Assume 18 decimals.
+
+            IERC20Dispatcher { contract_address: self.token_address.read() }
+                .mint(user, amount_to_mint);
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
-            // ERC20Dispatcher { contract_address: self.token_address.read() }
-        //     .mint(user, amount_to_mint);
         }
 
         fn get_token_price(self: @ContractState, token: ContractAddress) -> u256 {
