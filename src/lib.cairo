@@ -82,6 +82,9 @@ mod LifeSourceManager {
     }
 
     const POINT_BASIS: u256 = 35;
+    const STRK_ADDR:ContractAddress = 0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d;
+    const ETH_ADDR:ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
+
 
     #[constructor]
     fn constructor(ref self: ContractState, class_hash: ClassHash) {
@@ -91,6 +94,7 @@ mod LifeSourceManager {
         let (contract_address, _) = deploy_syscall(class_hash, salt, calldata.span(), unique)
             .unwrap();
         self.token_address.write(contract_address);
+        self.price_oracles.entry(STRK_ADDR).write(); // oracle for STRK/USD
     }
 
     #[abi(embed_v0)]
@@ -133,6 +137,10 @@ mod LifeSourceManager {
             IERC20Dispatcher { contract_address: self.token_address.read() }
                 .mint(user, amount_to_mint);
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
+        }
+
+        fn donate_to_foundation() -> true {
+            let price: u256 = self.get_token_price(STRK_ADDR)
         }
 
         fn get_token_price(self: @ContractState, token: ContractAddress) -> u256 {
