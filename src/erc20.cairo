@@ -30,6 +30,7 @@ pub mod ERC20 {
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use super::IERC20;
     use core::num::traits::Zero;
+    const MAX_SUPPLY: u256 = 1000000000000000000000000000;
 
     #[storage]
     struct Storage {
@@ -145,6 +146,7 @@ pub mod ERC20 {
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'only owner can mint');
+            assert(self.total_supply.read() + amount <= MAX_SUPPLY, 'max supply exceeded');
             let previous_total_supply = self.total_supply.read();
             let previous_balance = self.balances.read(recipient);
 

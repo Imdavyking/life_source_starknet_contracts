@@ -32,10 +32,11 @@ fn test_add_point_from_weight() {
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let dispatcher = ILifeSourceManagerDispatcher { contract_address };
+    let user: ContractAddress = starknet::contract_address_const::<'USER'>();
+    start_cheat_caller_address(contract_address, user);
     dispatcher.add_point_from_weight(100);
-
-    let user_ponts = dispatcher.get_user_points();
-
+    let user_ponts = dispatcher.get_user_points(user);
+    stop_cheat_caller_address(contract_address);
     assert(user_ponts == 3500, 'Invalid points');
 }
 #[test]
@@ -54,7 +55,7 @@ fn redeem_code() {
 
     dispatcher.redeem_code(100);
     let balance_of_user = erc_instance.balance_of(user);
-    let user_ponts = dispatcher.get_user_points();
+    let user_ponts = dispatcher.get_user_points(user);
     stop_cheat_caller_address(contract_address);
     assert(balance_of_user == 100000000000000000000, 'balance wrongly set');
     assert(user_ponts == 3400, 'Invalid points');

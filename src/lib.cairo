@@ -10,7 +10,7 @@ pub trait ILifeSourceManager<TContractState> {
     /// Get the price of a token.
     fn get_token_price(self: @TContractState, token: ContractAddress) -> u256;
     /// Get user points.
-    fn get_user_points(self: @TContractState) -> u256;
+    fn get_user_points(self: @TContractState, user: ContractAddress) -> u256;
     /// Get the token address.
     fn token_address(self: @TContractState) -> ContractAddress;
 }
@@ -150,8 +150,7 @@ mod LifeSourceManager {
             price
         }
 
-        fn get_user_points(self: @ContractState) -> u256 {
-            let user = get_caller_address();
+        fn get_user_points(self: @ContractState, user: ContractAddress) -> u256 {
             let point_data = self.user_points.entry(user).read();
             point_data.points
         }
