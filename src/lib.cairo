@@ -24,7 +24,7 @@ mod LifeSourceManager {
         StoragePathEntry,
     };
     use starknet::{
-        ContractAddress, get_block_timestamp, get_caller_address, contract_address_const,
+        ContractAddress, get_block_timestamp, get_caller_address, contract_address_const, ClassHash,
     };
     use snforge_std::declare;
     use starknet::syscalls::deploy_syscall;
@@ -82,8 +82,7 @@ mod LifeSourceManager {
     const POINT_BASIS: u256 = 35;
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        let class_hash = ERC20::TEST_CLASS_HASH.try_into().unwrap();
+    fn constructor(ref self: ContractState, class_hash: ClassHash) {
         let salt = 0;
         let unique = false;
         let mut calldata = array![];
