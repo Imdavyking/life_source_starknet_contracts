@@ -56,6 +56,8 @@ mod LifeSourceManager {
         pub const LifeSourceManager_WEIGHT_NON_ZERO: felt252 = 'Weight must be non-zero';
         pub const LifeSourceManager_USER_HAVE_NO_POINT: felt252 = 'User has no points';
         pub const LifeSourceManager_INSUFFICIENT_POINTS: felt252 = 'Insufficient points';
+        pub const LifeSourceManager_NO_ORACLE_FOR_TOKEN: felt252 = 'No oracle for token';
+        pub const LifeSourceManager_INVALID_PRICE_RETURNED: felt252 = 'Invalid price returned';
     }
 
     /// Events
@@ -135,7 +137,10 @@ mod LifeSourceManager {
 
         fn get_token_price(self: @ContractState, token: ContractAddress) -> u256 {
             let oracle = self.price_oracles.entry(token).read();
-            assert(oracle != contract_address_const::<0>(), 'no oracle for token');
+            assert(
+                oracle != contract_address_const::<0>(),
+                Errors::LifeSourceManager_NO_ORACLE_FOR_TOKEN,
+            );
             let asset_id = 0;
 
             // Create oracle dispatcher and get price
@@ -144,7 +149,7 @@ mod LifeSourceManager {
             };
             let output: PragmaPricesResponse = oracle_dispatcher
                 .get_data_median(DataType::SpotEntry(asset_id));
-            assert(output.price > 0, 'invalid price returned');
+            assert(output.price > 0, Errors::LifeSourceManager_INVALID_PRICE_RETURNED);
 
             let price: u256 = (output.price).try_into().unwrap();
             price

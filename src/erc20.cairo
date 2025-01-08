@@ -54,12 +54,12 @@ pub mod ERC20 {
 
     /// Errors
     pub mod Errors {
-        pub const ERC20_ONLY_OWNER_CAN_MINT: felt252 = 'only owner can mint';
-        pub const LifeSourceManager_MAX_SUPPLY_EXCEEDED: felt252 = 'max supply exceeded';
-        pub const LifeSourceManager_TRANSFER_FROM_ZERO: felt252 = 'transfer from 0';
-        pub const LifeSourceManager_TRANSFER_TO_ZERO: felt252 = 'transfer to 0';
-        pub const LifeSourceManager_APPROVE_FROM_ZERO: felt252 = 'approve from 0';
-        pub const LifeSourceManager_APPROVE_TO_ZERO: felt252 = 'approve to 0';
+        pub const ERC20_ONLY_OWNER_CAN_MINT: felt252 = 'Only owner can mint';
+        pub const ERC20_MAX_SUPPLY_EXCEEDED: felt252 = 'Max supply exceeded';
+        pub const ERC20_TRANSFER_FROM_ZERO: felt252 = 'Transfer from 0';
+        pub const ERC20_TRANSFER_TO_ZERO: felt252 = 'Transfer to 0';
+        pub const ERC20_APPROVE_FROM_ZERO: felt252 = 'Approve from 0';
+        pub const ERC20_APPROVE_TO_ZERO: felt252 = 'Approve to 0';
     }
 
     #[event]
@@ -192,7 +192,9 @@ pub mod ERC20 {
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
             let caller = get_caller_address();
             assert(caller == self.owner.read(), Errors::ERC20_ONLY_OWNER_CAN_MINT);
-            assert(self.total_supply.read() + amount <= MAX_SUPPLY);
+            assert(
+                self.total_supply.read() + amount <= MAX_SUPPLY, Errors::ERC20_MAX_SUPPLY_EXCEEDED,
+            );
             let previous_total_supply = self.total_supply.read();
             let previous_balance = self.balances.read(recipient);
 
@@ -220,8 +222,8 @@ pub mod ERC20 {
             recipient: ContractAddress,
             amount: u256,
         ) {
-            assert(!sender.is_zero(), Errors::LifeSourceManager_TRANSFER_FROM_ZERO);
-            assert(!recipient.is_zero(), Errors::LifeSourceManager_TRANSFER_TO_ZERO);
+            assert(!sender.is_zero(), Errors::ERC20_TRANSFER_FROM_ZERO);
+            assert(!recipient.is_zero(), Errors::ERC20_TRANSFER_TO_ZERO);
 
             self.balances.entry(sender).write(self.balances.read(sender) - amount);
             self.balances.entry(recipient).write(self.balances.read(recipient) + amount);
@@ -232,8 +234,8 @@ pub mod ERC20 {
         fn approve_helper(
             ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256,
         ) {
-            assert(!owner.is_zero(), Errors::LifeSourceManager_APPROVE_FROM_ZERO);
-            assert(!spender.is_zero(), Errors::LifeSourceManager_APPROVE_TO_ZERO);
+            assert(!owner.is_zero(), Errors::ERC20_APPROVE_FROM_ZERO);
+            assert(!spender.is_zero(), Errors::ERC20_APPROVE_TO_ZERO);
 
             self.allowances.entry((owner, spender)).write(amount);
 
