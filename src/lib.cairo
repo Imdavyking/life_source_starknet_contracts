@@ -1,6 +1,7 @@
 pub mod erc20;
 use starknet::ContractAddress;
 
+
 #[starknet::interface]
 pub trait ILifeSourceManager<TContractState> {
     /// Add points from the weight of the waste.
@@ -25,10 +26,12 @@ mod LifeSourceManager {
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, contract_address_const,
     };
+    use snforge_std::declare;
+    use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
     use pragma_lib::types::{DataType, PragmaPricesResponse};
-    use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait};
+    use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait, erc20::ERC20};
 
     #[storage]
     struct Storage {
@@ -79,8 +82,14 @@ mod LifeSourceManager {
     const POINT_BASIS: u256 = 35;
 
     #[constructor]
-    fn constructor(ref self: ContractState, token_address: ContractAddress) {
-        self.token_address.write(token_address);
+    fn constructor(ref self: ContractState) {
+        let class_hash = ERC20::TEST_CLASS_HASH.try_into().unwrap();
+        let salt = 0;
+        let unique = false;
+        let mut calldata = array![];
+        let (contract_address, _) = deploy_syscall(class_hash, salt, calldata.span(), unique)
+            .unwrap();
+        self.token_address.write(contract_address);
     }
 
     #[abi(embed_v0)]

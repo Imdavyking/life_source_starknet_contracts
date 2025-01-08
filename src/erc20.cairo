@@ -63,7 +63,7 @@ pub mod ERC20 {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, _name: felt252) {
+    fn constructor(ref self: ContractState) {
         self.name.write("LifeSourceToken");
         self.symbol.write("LFT");
         self.decimals.write(18);
