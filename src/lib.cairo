@@ -1,7 +1,6 @@
 pub mod erc20;
 use starknet::ContractAddress;
 
-
 #[starknet::interface]
 pub trait ILifeSourceManager<TContractState> {
     /// Add points from the weight of the waste.
