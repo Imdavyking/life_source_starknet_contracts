@@ -16,36 +16,50 @@ async function main() {
   console.log("Account connected.\n");
 
   // Declare & deploy contract
-  let sierraCode, casmCode;
+  let sierraCode,
+    casmCode,
+    sierraCodeLifeSourceManager,
+    casmCodLifeSourceManager;
 
   try {
     ({ sierraCode, casmCode } = await getCompiledCode("life_source_ERC20"));
+    ({
+      sierraCode: sierraCodeLifeSourceManager,
+      casmCode: casmCodLifeSourceManager,
+    } = await getCompiledCode("life_source_LifeSourceManager"));
   } catch (error: any) {
     console.log("Failed to read contract files");
     console.log(error);
     process.exit(1);
   }
 
-  const myCallData = new CallData(sierraCode.abi);
-
-  const constructor = myCallData.compile("constructor", {});
-
   const declareResponse = await account0.declareIfNot({
     contract: sierraCode,
     casm: casmCode,
-    // constructorCalldata: constructor,
-    // salt: stark.randomAddress(),
+  });
+
+  const myCallDataLifeSource = new CallData(sierraCodeLifeSourceManager.abi);
+
+  const constructorLifeSource = myCallDataLifeSource.compile("constructor", {
+    class_hash: declareResponse.class_hash,
+  });
+
+  const deployResponse = await account0.declareAndDeploy({
+    contract: sierraCodeLifeSourceManager,
+    casm: casmCodLifeSourceManager,
+    constructorCalldata: constructorLifeSource,
+    salt: stark.randomAddress(),
   });
 
   // Connect the new contract instance :
-  // const erc20Contract = new Contract(
-  //   sierraCode.abi,
-  //   deployResponse.deploy.contract_address,
-  //   provider
-  // );
-  //   console.log(
-  //     `✅ Contract has been deploy with the address: ${peerProtocolContract.address}`
-  //   );
+  const lifeSourceContract = new Contract(
+    sierraCodeLifeSourceManager.abi,
+    deployResponse.deploy.contract_address,
+    provider
+  );
+  console.log(
+    `✅ Contract has been deploy with the address: ${lifeSourceContract.address}`
+  );
 }
 main()
   .then(() => process.exit(0))
