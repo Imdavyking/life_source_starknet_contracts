@@ -13,6 +13,8 @@ pub trait ILifeSourceManager<TContractState> {
     fn get_user_points(self: @TContractState, user: ContractAddress) -> u256;
     /// Get the token address.
     fn token_address(self: @TContractState) -> ContractAddress;
+    /// Donate to foundation.
+    fn donate_to_foundation(self: @ContractState,token: ContractAddress,amount_in_usd: u256) -> bool;
 }
 
 
@@ -139,8 +141,9 @@ mod LifeSourceManager {
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
         }
 
-        fn donate_to_foundation() -> true {
-            let price: u256 = self.get_token_price(STRK_ADDR)
+        fn donate_to_foundation(self: @ContractState,token: ContractAddress,amount_in_usd: u256) -> bool {
+            let price: u256 = self.get_token_price(token)
+            true
         }
 
         fn get_token_price(self: @ContractState, token: ContractAddress) -> u256 {
