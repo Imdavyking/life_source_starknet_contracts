@@ -1,6 +1,7 @@
 pub mod erc20;
 use starknet::ContractAddress;
-
+use core::serde::Serde;
+use pragma_lib::types::{AggregationMode, DataType};
 #[starknet::interface]
 pub trait ILifeSourceManager<TContractState> {
     /// Add points from the weight of the waste.
@@ -8,13 +9,17 @@ pub trait ILifeSourceManager<TContractState> {
     /// Redeem code.
     fn redeem_code(ref self: TContractState, points_to_redeem: u256);
     /// Get the price of a token.
-    fn get_token_price(self: @TContractState, token: ContractAddress) -> u256;
+    fn get_token_price(
+        self: @TContractState, oracle_address: ContractAddress, asset: DataType,
+    ) -> u128;
     /// Get user points.
     fn get_user_points(self: @TContractState, user: ContractAddress) -> u256;
     /// Get the token address.
     fn token_address(self: @TContractState) -> ContractAddress;
     /// Donate to foundation.
-    fn donate_to_foundation(self: @ContractState,token: ContractAddress,amount_in_usd: u256) -> bool;
+    fn donate_to_foundation(
+        self: @TContractState, token: ContractAddress, amount_in_usd: u256,
+    ) -> bool;
 }
 
 
@@ -26,14 +31,14 @@ mod LifeSourceManager {
         StoragePointerReadAccess, StoragePointerWriteAccess, Map, StorageMapWriteAccess,
         StoragePathEntry,
     };
-    use starknet::{
-        ContractAddress, get_block_timestamp, get_caller_address, contract_address_const, ClassHash,
-    };
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address, ClassHash};
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
-    use pragma_lib::types::{DataType, PragmaPricesResponse};
+    use pragma_lib::types::{PragmaPricesResponse};
+    use starknet::contract_address::contract_address_const;
     use crate::{erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait};
+    use pragma_lib::types::{AggregationMode, DataType};
 
     #[storage]
     struct Storage {
@@ -84,8 +89,6 @@ mod LifeSourceManager {
     }
 
     const POINT_BASIS: u256 = 35;
-    const STRK_ADDR:ContractAddress = 0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d;
-    const ETH_ADDR:ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
 
 
     #[constructor]
@@ -96,8 +99,10 @@ mod LifeSourceManager {
         let (contract_address, _) = deploy_syscall(class_hash, salt, calldata.span(), unique)
             .unwrap();
         self.token_address.write(contract_address);
-        self.price_oracles.entry(STRK_ADDR).write(); // oracle for STRK/USD
+        // self.price_oracles.entry(self.get_strk_address()).write(); // oracle for STRK/USD
+    // self.price_oracles.entry(self.get_eth_address()).write(); // oracle for ETH/USD
     }
+
 
     #[abi(embed_v0)]
     impl LifeSourceManagerImpl of ILifeSourceManager<ContractState> {
@@ -141,29 +146,24 @@ mod LifeSourceManager {
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
         }
 
-        fn donate_to_foundation(self: @ContractState,token: ContractAddress,amount_in_usd: u256) -> bool {
-            let price: u256 = self.get_token_price(token)
+        fn donate_to_foundation(
+            self: @ContractState, token: ContractAddress, amount_in_usd: u256,
+        ) -> bool {
+            const KEY: felt252 = 'STRK/USD';
+            let oracle_address: ContractAddress = contract_address_const::<
+                0x06df335982dddce41008e4c03f2546fa27276567b5274c7d0c1262f3c2b5d167,
+            >();
+            let price = self.get_token_price(oracle_address, DataType::SpotEntry(KEY));
             true
         }
 
-        fn get_token_price(self: @ContractState, token: ContractAddress) -> u256 {
-            let oracle = self.price_oracles.entry(token).read();
-            assert(
-                oracle != contract_address_const::<0>(),
-                Errors::LifeSourceManager_NO_ORACLE_FOR_TOKEN,
-            );
-            let asset_id = 0;
-
-            // Create oracle dispatcher and get price
-            let oracle_dispatcher = IPragmaABIDispatcher {
-                contract_address: self.price_oracles.entry(token).read(),
-            };
+        fn get_token_price(
+            self: @ContractState, oracle_address: ContractAddress, asset: DataType,
+        ) -> u128 {
+            let oracle_dispatcher = IPragmaABIDispatcher { contract_address: oracle_address };
             let output: PragmaPricesResponse = oracle_dispatcher
-                .get_data_median(DataType::SpotEntry(asset_id));
-            assert(output.price > 0, Errors::LifeSourceManager_INVALID_PRICE_RETURNED);
-
-            let price: u256 = (output.price).try_into().unwrap();
-            price
+                .get_data(asset, AggregationMode::Median(()));
+            return output.price;
         }
 
         fn get_user_points(self: @ContractState, user: ContractAddress) -> u256 {
@@ -173,6 +173,20 @@ mod LifeSourceManager {
 
         fn token_address(self: @ContractState) -> ContractAddress {
             self.token_address.read()
+        }
+    }
+
+    #[generate_trait]
+    impl Private of PrivateTrait {
+        fn get_strk_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<
+                0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d,
+            >()
+        }
+        fn get_eth_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<
+                0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7,
+            >()
         }
     }
 }
