@@ -1,7 +1,6 @@
 pub mod erc20;
 use starknet::ContractAddress;
-use core::serde::Serde;
-use pragma_lib::types::{AggregationMode, DataType};
+use pragma_lib::types::DataType;
 #[starknet::interface]
 pub trait ILifeSourceManager<TContractState> {
     /// Add points from the weight of the waste.
@@ -11,15 +10,19 @@ pub trait ILifeSourceManager<TContractState> {
     /// Get the price of a token.
     fn get_token_price(
         self: @TContractState, oracle_address: ContractAddress, asset: DataType,
-    ) -> u128;
+    ) -> (u128, u32);
     /// Get user points.
     fn get_user_points(self: @TContractState, user: ContractAddress) -> u256;
     /// Get the token address.
     fn token_address(self: @TContractState) -> ContractAddress;
     /// Donate to foundation.
     fn donate_to_foundation(
-        self: @TContractState, token: ContractAddress, amount_in_usd: u256,
+        ref self: TContractState, token: ContractAddress, amount_in_usd: u256,
     ) -> bool;
+    /// Withdraw donation.
+    fn withdraw_donation(ref self: TContractState, token: ContractAddress, amount: u256) -> bool;
+    /// Change admin.
+    fn change_admin(ref self: TContractState, new_admin: ContractAddress);
 }
 
 
@@ -27,11 +30,13 @@ pub trait ILifeSourceManager<TContractState> {
 #[starknet::contract]
 mod LifeSourceManager {
     use core::num::traits::Pow;
+    use starknet::storage::StoragePathEntry;
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, Map, StorageMapWriteAccess,
-        StoragePathEntry,
     };
-    use starknet::{ContractAddress, get_block_timestamp, get_caller_address, ClassHash};
+    use starknet::{
+        ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, ClassHash,
+    };
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
     use pragma_lib::abi::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait};
@@ -43,9 +48,11 @@ mod LifeSourceManager {
     #[storage]
     struct Storage {
         price_oracles: Map<
-            ContractAddress, ContractAddress,
+            ContractAddress, felt252,
         >, // Mapping from token address to oracle address.
         user_points: Map<ContractAddress, PointData>, // Mapping from user address to PointData.
+        donations: Map<ContractAddress, u256>, // Mapping from token address to amount donated.
+        admin: ContractAddress, // Admin address.
         token_address: ContractAddress // Address of the ERC20 token contract.,
     }
 
@@ -99,8 +106,9 @@ mod LifeSourceManager {
         let (contract_address, _) = deploy_syscall(class_hash, salt, calldata.span(), unique)
             .unwrap();
         self.token_address.write(contract_address);
-        // self.price_oracles.entry(self.get_strk_address()).write(); // oracle for STRK/USD
-    // self.price_oracles.entry(self.get_eth_address()).write(); // oracle for ETH/USD
+        self.price_oracles.entry(self.get_strk_address()).write('STRK/USD');
+        self.price_oracles.entry(self.get_eth_address()).write('ETH/USD');
+        self.admin.write(get_caller_address());
     }
 
 
@@ -147,23 +155,64 @@ mod LifeSourceManager {
         }
 
         fn donate_to_foundation(
-            self: @ContractState, token: ContractAddress, amount_in_usd: u256,
+            ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> bool {
-            const KEY: felt252 = 'STRK/USD';
+            let caller = get_caller_address();
+            let this_contract = get_contract_address();
+            let KEY: felt252 = self.price_oracles.entry(token).read();
             let oracle_address: ContractAddress = contract_address_const::<
-                0x06df335982dddce41008e4c03f2546fa27276567b5274c7d0c1262f3c2b5d167,
+                0x36031daa264c24520b11d93af622c848b2499b66b41d611bac95e13cfca131a,
             >();
-            let price = self.get_token_price(oracle_address, DataType::SpotEntry(KEY));
+            let (price_of_token_in_usd, price_decimals) = self
+                .get_token_price(oracle_address, DataType::SpotEntry(KEY));
+            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let token_decimals = erc_token.decimals();
+
+            let amount_to_send_numerator: u256 = amount_in_usd
+                * 10_u256.pow(price_decimals.into())
+                * 10_u256.pow(token_decimals.into());
+
+            let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
+
+            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+
+            erc_token.transfer_from(caller, this_contract, amount_to_send);
+            let mut donation = self.donations.entry(token).read();
+            donation = donation + amount_to_send;
+            self.donations.entry(token).write(donation);
+
             true
+        }
+
+        fn withdraw_donation(
+            ref self: ContractState, token: ContractAddress, amount: u256,
+        ) -> bool {
+            let caller = get_caller_address();
+            assert(caller == self.admin.read(), 'Only admin can withdraw');
+            let mut donation = self.donations.entry(token).read();
+            assert(donation >= amount, 'Insufficient donation');
+            donation = donation - amount;
+            self.donations.entry(token).write(donation);
+            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let success = erc_token.transfer(caller, amount);
+            assert(success == true, 'Transfer failed');
+            true
+        }
+
+
+        fn change_admin(ref self: ContractState, new_admin: ContractAddress) {
+            let caller = get_caller_address();
+            assert(caller == self.admin.read(), 'Only admin can change admin');
+            self.admin.write(new_admin);
         }
 
         fn get_token_price(
             self: @ContractState, oracle_address: ContractAddress, asset: DataType,
-        ) -> u128 {
+        ) -> (u128, u32) {
             let oracle_dispatcher = IPragmaABIDispatcher { contract_address: oracle_address };
             let output: PragmaPricesResponse = oracle_dispatcher
                 .get_data(asset, AggregationMode::Median(()));
-            return output.price;
+            return (output.price, output.decimals);
         }
 
         fn get_user_points(self: @ContractState, user: ContractAddress) -> u256 {
