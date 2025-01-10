@@ -36,6 +36,7 @@ mod LifeSourceManager {
     };
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, ClassHash,
+        get_tx_info,
     };
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
@@ -72,6 +73,7 @@ mod LifeSourceManager {
         pub const LifeSourceManager_INSUFFICIENT_POINTS: felt252 = 'Insufficient points';
         pub const LifeSourceManager_NO_ORACLE_FOR_TOKEN: felt252 = 'No oracle for token';
         pub const LifeSourceManager_INVALID_PRICE_RETURNED: felt252 = 'Invalid price returned';
+        pub const LifeSourceManager_ONLY_ADMIN_CAN_CHANGE: felt252 = 'Only admin can change';
     }
 
     /// Events
@@ -180,9 +182,19 @@ mod LifeSourceManager {
             let caller = get_caller_address();
             let this_contract = get_contract_address();
             let KEY: felt252 = self.price_oracles.entry(token).read();
-            let oracle_address: ContractAddress = contract_address_const::<
+
+            let tx_info = get_tx_info();
+
+            let mut oracle_address: ContractAddress = contract_address_const::<
                 0x36031daa264c24520b11d93af622c848b2499b66b41d611bac95e13cfca131a,
             >();
+
+            if tx_info.chain_id != 11155111 {
+                // oracle_address =
+                //     contract_address_const::<
+                //         0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b,
+                //     >();
+            };
             let (price_of_token_in_usd, price_decimals) = self
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
@@ -224,7 +236,7 @@ mod LifeSourceManager {
 
         fn change_admin(ref self: ContractState, new_admin: ContractAddress) {
             let caller = get_caller_address();
-            assert(caller == self.admin.read(), 'Only admin can change admin');
+            assert(caller == self.admin.read(), Errors::LifeSourceManager_ONLY_ADMIN_CAN_CHANGE);
             self.admin.write(new_admin);
             self.emit(Event::ChangedAdmin(ChangedAdmin { new_admin }));
         }
