@@ -82,6 +82,9 @@ mod LifeSourceManager {
     pub enum Event {
         AddPointFromWeight: AddPointFromWeight,
         RedeemCode: RedeemCode,
+        Donated: Donated,
+        WithdrawnDonation: WithdrawnDonation,
+        ChangedAdmin: ChangedAdmin,
     }
 
     #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
@@ -93,6 +96,23 @@ mod LifeSourceManager {
     pub struct RedeemCode {
         pub points_to_redeem: u256,
         pub user: ContractAddress,
+    }
+
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub struct Donated {
+        pub token: ContractAddress,
+        pub amount: u256,
+    }
+
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub struct WithdrawnDonation {
+        pub token: ContractAddress,
+        pub amount: u256,
+    }
+
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub struct ChangedAdmin {
+        pub new_admin: ContractAddress,
     }
 
     const POINT_BASIS: u256 = 35;
@@ -180,6 +200,7 @@ mod LifeSourceManager {
             let mut donation = self.donations.entry(token).read();
             donation = donation + amount_to_send;
             self.donations.entry(token).write(donation);
+            self.emit(Event::Donated(Donated { token, amount: amount_to_send }));
 
             true
         }
@@ -196,6 +217,7 @@ mod LifeSourceManager {
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
             let success = erc_token.transfer(caller, amount);
             assert(success == true, 'Transfer failed');
+            self.emit(Event::WithdrawnDonation(WithdrawnDonation { token, amount }));
             true
         }
 
@@ -204,6 +226,7 @@ mod LifeSourceManager {
             let caller = get_caller_address();
             assert(caller == self.admin.read(), 'Only admin can change admin');
             self.admin.write(new_admin);
+            self.emit(Event::ChangedAdmin(ChangedAdmin { new_admin }));
         }
 
         fn get_token_price(
