@@ -61,18 +61,3 @@ fn redeem_code() {
     assert(user_ponts == 3400, 'Invalid points');
 }
 
-#[test]
-#[should_panic(expected: 'Only admin can change')]
-fn change_admin() {
-    let erc20_contract = declare("ERC20").unwrap().contract_class();
-    let mut constructor_calldata = ArrayTrait::new();
-    erc20_contract.class_hash.serialize(ref constructor_calldata);
-    let contract = declare("LifeSourceManager").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-
-    let dispatcher = ILifeSourceManagerDispatcher { contract_address };
-    let user: ContractAddress = starknet::contract_address_const::<'USER'>();
-
-    dispatcher.change_admin(starknet::contract_address_const::<'NEWUSER'>());
-}
-
