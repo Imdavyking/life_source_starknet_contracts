@@ -79,8 +79,6 @@ mod LifeSourceManager {
     /// Events
     #[event]
     #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
-    // The event enum must be annotated with the `#[event]` attribute.
-    // It must also derive at least the `Drop` and `starknet::Event` traits.
     pub enum Event {
         AddPointFromWeight: AddPointFromWeight,
         RedeemCode: RedeemCode,
