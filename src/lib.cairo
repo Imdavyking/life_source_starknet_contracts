@@ -21,6 +21,8 @@ pub trait ILifeSourceManager<TContractState> {
     ) -> bool;
     /// Withdraw donation.
     fn withdraw_donation(ref self: TContractState, token: ContractAddress, amount: u256) -> bool;
+    /// Get donation
+    fn get_donation(self: @TContractState, token: ContractAddress) -> u256;
     /// Change admin.
     fn change_admin(ref self: TContractState, new_admin: ContractAddress);
 }
@@ -206,6 +208,10 @@ mod LifeSourceManager {
             self.emit(Event::Donated(Donated { token, amount: amount_to_send }));
 
             true
+        }
+
+        fn get_donation(self: @ContractState, token: ContractAddress) -> u256 {
+            self.donations.entry(token).read()
         }
 
         fn withdraw_donation(
