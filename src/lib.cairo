@@ -206,14 +206,12 @@ mod LifeSourceManager {
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
             let token_decimals = erc_token.decimals();
 
-            // let amount_to_send_numerator: u256 = amount_in_usd *
-            // 10_u256.pow(token_decimals.into());
+            let amount_to_send_numerator: u256 = amount_in_usd * 10_u256.pow(token_decimals.into());
 
-            // let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
+            let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            // let amount_to_send: u256 = (amount_to_send_numerator / amount_to_send_denominator)
-            //     * 10_u256.pow(price_decimals.into());
-            let amount_to_send: u256 = price_of_token_in_usd.into();
+            let amount_to_send: u256 = (amount_to_send_numerator / amount_to_send_denominator)
+                * 10_u256.pow(price_decimals.into());
 
             erc_token.transfer_from(caller, this_contract, amount_to_send);
             let mut donation = self.donations.entry(token).read();
