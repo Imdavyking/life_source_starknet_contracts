@@ -7,6 +7,10 @@ pub trait ILifeSourceManager<TContractState> {
     fn add_point_from_weight(ref self: TContractState, weight_in_grams: u256);
     /// Redeem code.
     fn redeem_code(ref self: TContractState, points_to_redeem: u256);
+    /// Get conversion rate
+    fn get_conversion(
+        self: @TContractState, token: ContractAddress, amount_in_usd: u256,
+    ) -> (u128, u32);
     /// Get the price of a token.
     fn get_token_price(
         self: @TContractState, oracle_address: ContractAddress, asset: DataType,
@@ -174,6 +178,18 @@ mod LifeSourceManager {
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
         }
 
+        fn get_conversion(
+            self: @ContractState, token: ContractAddress, amount_in_usd: u256,
+        ) -> (u128, u32) {
+            let mut oracle_address: ContractAddress = self.get_oracle_address();
+            let KEY: felt252 = self.price_oracles.entry(token).read();
+            let (price_of_token_in_usd, price_decimals) = self
+                .get_token_price(oracle_address, DataType::SpotEntry(KEY));
+            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let token_decimals = erc_token.decimals();
+            (price_of_token_in_usd, price_decimals)
+        }
+
         fn donate_to_foundation(
             ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> bool {
@@ -183,26 +199,21 @@ mod LifeSourceManager {
 
             let tx_info = get_tx_info();
 
-            let mut oracle_address: ContractAddress = contract_address_const::<
-                0x36031daa264c24520b11d93af622c848b2499b66b41d611bac95e13cfca131a,
-            >();
+            let mut oracle_address: ContractAddress = self.get_oracle_address();
 
-            if tx_info.chain_id != 11155111 { // oracle_address =
-                contract_address_const::<
-                    0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b,
-                >();
-            };
             let (price_of_token_in_usd, price_decimals) = self
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
             let token_decimals = erc_token.decimals();
 
-            let amount_to_send_numerator: u256 = amount_in_usd * 10_u256.pow(token_decimals.into());
+            // let amount_to_send_numerator: u256 = amount_in_usd *
+            // 10_u256.pow(token_decimals.into());
 
-            let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
+            // let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let amount_to_send: u256 = (amount_to_send_numerator / amount_to_send_denominator)
-                * 10_u256.pow(price_decimals.into());
+            // let amount_to_send: u256 = (amount_to_send_numerator / amount_to_send_denominator)
+            //     * 10_u256.pow(price_decimals.into());
+            let amount_to_send: u256 = price_of_token_in_usd.into();
 
             erc_token.transfer_from(caller, this_contract, amount_to_send);
             let mut donation = self.donations.entry(token).read();
@@ -260,12 +271,17 @@ mod LifeSourceManager {
     impl Private of PrivateTrait {
         fn get_strk_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<
-                0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d,
+                0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d,
             >()
         }
         fn get_eth_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<
                 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7,
+            >()
+        }
+        fn get_oracle_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<
+                0x036031daa264c24520b11d93af622c848b2499b66b41d611bac95e13cfca131a,
             >()
         }
     }
