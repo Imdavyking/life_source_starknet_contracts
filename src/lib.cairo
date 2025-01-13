@@ -7,10 +7,6 @@ pub trait ILifeSourceManager<TContractState> {
     fn add_point_from_weight(ref self: TContractState, weight_in_grams: u256);
     /// Redeem code.
     fn redeem_code(ref self: TContractState, points_to_redeem: u256);
-    /// Get conversion rate
-    fn get_conversion(
-        self: @TContractState, token: ContractAddress, amount_in_usd: u256,
-    ) -> (u128, u32);
     /// Get the price of a token.
     fn get_token_price(
         self: @TContractState, oracle_address: ContractAddress, asset: DataType,
@@ -178,17 +174,6 @@ mod LifeSourceManager {
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
         }
 
-        fn get_conversion(
-            self: @ContractState, token: ContractAddress, amount_in_usd: u256,
-        ) -> (u128, u32) {
-            let mut oracle_address: ContractAddress = self.get_oracle_address();
-            let KEY: felt252 = self.price_oracles.entry(token).read();
-            let (price_of_token_in_usd, price_decimals) = self
-                .get_token_price(oracle_address, DataType::SpotEntry(KEY));
-            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
-            let token_decimals = erc_token.decimals();
-            (price_of_token_in_usd, price_decimals)
-        }
 
         fn donate_to_foundation(
             ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
@@ -206,14 +191,15 @@ mod LifeSourceManager {
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
             let token_decimals = erc_token.decimals();
 
-            let amount_to_send_numerator: u256 = amount_in_usd * 10_u256.pow(token_decimals.into());
+            let amount_to_send_numerator: u256 = amount_in_usd
+                * 10_u256.pow(token_decimals.into())
+                * 10_u256.pow(price_decimals.into());
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let amount_to_send: u256 = (amount_to_send_numerator / amount_to_send_denominator)
-                * 10_u256.pow(price_decimals.into());
+            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
-            erc_token.transfer_from(caller, this_contract, amount_to_send);
+            // erc_token.transfer_from(caller, this_contract, amount_to_send);
             let mut donation = self.donations.entry(token).read();
             donation = donation + amount_to_send;
             self.donations.entry(token).write(donation);
