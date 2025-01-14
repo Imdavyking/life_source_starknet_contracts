@@ -24,6 +24,22 @@ fn lifesource_manager_is_token_owner() {
 }
 
 #[test]
+fn test_admin_is_constructor_caller() {
+    let erc20_contract = declare("ERC20").unwrap().contract_class();
+    let mut constructor_calldata = ArrayTrait::new();
+    erc20_contract.class_hash.serialize(ref constructor_calldata);
+    let contract = declare("LifeSourceManager").unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+
+    let dispatcher = ILifeSourceManagerDispatcher { contract_address };
+    let user: ContractAddress = starknet::contract_address_const::<'USER'>();
+    start_cheat_caller_address(contract_address, user);
+    let admin = dispatcher.get_admin();
+    stop_cheat_caller_address(contract_address);
+    assert(admin == user, 'Invalid admin');
+}
+
+#[test]
 fn test_add_point_from_weight() {
     let erc20_contract = declare("ERC20").unwrap().contract_class();
     let mut constructor_calldata = ArrayTrait::new();
