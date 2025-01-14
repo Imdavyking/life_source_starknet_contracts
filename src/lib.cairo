@@ -187,22 +187,22 @@ mod LifeSourceManager {
             let this_contract = get_contract_address();
             let KEY: felt252 = self.price_oracles.entry(token).read();
 
-            let tx_info = get_tx_info();
-
             let mut oracle_address: ContractAddress = self.get_oracle_address();
 
             let (price_of_token_in_usd, price_decimals) = self
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
-            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc_token = IERC20Dispatcher { contract_address: token };
             let token_decimals = erc_token.decimals();
 
-            let amount_to_send_numerator: u256 = amount_in_usd * ONE_E18 * ONE_E8;
+            let amount_to_send_numerator: u256 = amount_in_usd
+                * 10_u256.pow(token_decimals.into())
+                * 10_u256.pow(price_decimals.into());
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
             let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
-            // erc_token.transfer_from(caller, this_contract, amount_to_send);
+            erc_token.transfer_from(caller, this_contract, amount_to_send);
             let donation = self.donations.entry(token).read();
             self.donations.entry(token).write(donation + amount_to_send);
             self.emit(Event::Donated(Donated { token, amount: amount_to_send }));
@@ -223,7 +223,7 @@ mod LifeSourceManager {
             assert(donation >= amount, 'Insufficient donation');
             donation = donation - amount;
             self.donations.entry(token).write(donation);
-            let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc_token = IERC20Dispatcher { contract_address: token };
             let success = erc_token.transfer(caller, amount);
             assert(success == true, 'Transfer failed');
             self.emit(Event::WithdrawnDonation(WithdrawnDonation { token, amount }));
