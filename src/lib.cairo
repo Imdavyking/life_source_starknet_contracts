@@ -79,6 +79,7 @@ mod LifeSourceManager {
         pub const LifeSourceManager_NO_ORACLE_FOR_TOKEN: felt252 = 'No oracle for token';
         pub const LifeSourceManager_INVALID_PRICE_RETURNED: felt252 = 'Invalid price returned';
         pub const LifeSourceManager_ONLY_ADMIN_CAN_CHANGE: felt252 = 'Only admin can change';
+        pub const LifeSourceManager_INSUFFICIENT_ALLOWANCE: felt252 = 'Insufficient allowance';
     }
 
     /// Events
@@ -194,6 +195,9 @@ mod LifeSourceManager {
             let (price_of_token_in_usd, price_decimals) = self
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
             let erc_token = IERC20Dispatcher { contract_address: token };
+            let allowance = erc_token.allowance(caller, this_contract);
+            let slippageToleranceBps = 200; // 200 basis points = 2%
+
             let token_decimals = erc_token.decimals();
 
             let amount_to_send_numerator: u256 = amount_in_usd
@@ -202,7 +206,15 @@ mod LifeSourceManager {
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+            let mut amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+
+            let minTokenAmount = (amount_to_send * (10000 - slippageToleranceBps)) / 10000;
+            let maxTokenAmount = (amount_to_send * (10000 + slippageToleranceBps)) / 10000;
+
+            if allowance >= minTokenAmount && allowance <= maxTokenAmount {
+                amount_to_send = allowance;
+            }
+            assert(allowance >= amount_to_send, Errors::LifeSourceManager_INSUFFICIENT_ALLOWANCE);
 
             erc_token.transfer_from(caller, this_contract, amount_to_send);
             let donation = self.donations.entry(token).read();
@@ -220,6 +232,7 @@ mod LifeSourceManager {
             let (price_of_token_in_usd, price_decimals) = self
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
             let erc_token = IERC20Dispatcher { contract_address: token };
+
             let token_decimals = erc_token.decimals();
 
             let amount_to_send_numerator: u256 = amount_in_usd
