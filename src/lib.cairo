@@ -29,6 +29,8 @@ pub trait ILifeSourceManager<TContractState> {
     fn get_donation(self: @TContractState, token: ContractAddress) -> u256;
     /// Change admin.
     fn change_admin(ref self: TContractState, new_admin: ContractAddress);
+    /// Get admin.
+    fn get_admin(self: @TContractState) -> ContractAddress;
 }
 
 
@@ -272,6 +274,10 @@ mod LifeSourceManager {
             assert(caller == self.admin.read(), Errors::LifeSourceManager_ONLY_ADMIN_CAN_CHANGE);
             self.admin.write(new_admin);
             self.emit(Event::ChangedAdmin(ChangedAdmin { new_admin }));
+        }
+
+        fn get_admin(self: @ContractState) -> ContractAddress {
+            self.admin.read()
         }
 
         fn get_token_price(
