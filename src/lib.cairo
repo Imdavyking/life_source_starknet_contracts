@@ -19,6 +19,10 @@ pub trait ILifeSourceManager<TContractState> {
     fn donate_to_foundation(
         ref self: TContractState, token: ContractAddress, amount_in_usd: u256,
     ) -> bool;
+    /// Get usd to token price.
+    fn get_usd_to_token_price(
+        ref self: TContractState, token: ContractAddress, amount_in_usd: u256,
+    ) -> u256;
     /// Withdraw donation.
     fn withdraw_donation(ref self: TContractState, token: ContractAddress, amount: u256) -> bool;
     /// Get donation
@@ -208,6 +212,28 @@ mod LifeSourceManager {
             self.emit(Event::Donated(Donated { token, amount: amount_to_send }));
 
             true
+        }
+
+        fn get_usd_to_token_price(
+            ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
+        ) -> u256 {
+            let this_contract = get_contract_address();
+            let KEY: felt252 = self.price_oracles.entry(token).read();
+            let mut oracle_address: ContractAddress = self.get_oracle_address();
+            let (price_of_token_in_usd, price_decimals) = self
+                .get_token_price(oracle_address, DataType::SpotEntry(KEY));
+            let erc_token = IERC20Dispatcher { contract_address: token };
+            let token_decimals = erc_token.decimals();
+
+            let amount_to_send_numerator: u256 = amount_in_usd
+                * 10_u256.pow(token_decimals.into())
+                * 10_u256.pow(price_decimals.into());
+
+            let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
+
+            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+
+            amount_to_send
         }
 
         fn get_donation(self: @ContractState, token: ContractAddress) -> u256 {
