@@ -31,6 +31,7 @@ pub trait ILifeSourceManager<TContractState> {
 /// Contract for managing user points and redeeming them as tokens.
 #[starknet::contract]
 mod LifeSourceManager {
+    use core::num::traits::OverflowingMul;
     use core::num::traits::Pow;
     use starknet::storage::StoragePathEntry;
     use starknet::storage::{
@@ -118,6 +119,8 @@ mod LifeSourceManager {
     }
 
     const POINT_BASIS: u256 = 35;
+    const ONE_E18: u256 = 1000000000000000000_u256;
+    const ONE_E8: u256 = 100000000_u256;
 
 
     #[constructor]
@@ -193,15 +196,13 @@ mod LifeSourceManager {
             let erc_token = IERC20Dispatcher { contract_address: self.token_address.read() };
             let token_decimals = erc_token.decimals();
 
-            let amount_to_send_numerator: u256 = amount_in_usd
-                * 10_u256.pow(token_decimals.into())
-                * 10_u256.pow(price_decimals.into());
+            let amount_to_send_numerator: u256 = amount_in_usd * ONE_E18 * ONE_E8;
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
             let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
-            erc_token.transfer_from(caller, this_contract, amount_to_send);
+            // erc_token.transfer_from(caller, this_contract, amount_to_send);
             let mut donation = self.donations.entry(token).read();
             donation = donation + amount_to_send;
             self.donations.entry(token).write(donation);
