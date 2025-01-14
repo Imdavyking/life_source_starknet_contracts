@@ -203,9 +203,8 @@ mod LifeSourceManager {
             let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
             // erc_token.transfer_from(caller, this_contract, amount_to_send);
-            let mut donation = self.donations.entry(token).read();
-            donation = donation + amount_to_send;
-            self.donations.entry(token).write(donation);
+            let donation = self.donations.entry(token).read();
+            self.donations.entry(token).write(donation + amount_to_send);
             self.emit(Event::Donated(Donated { token, amount: amount_to_send }));
 
             true
