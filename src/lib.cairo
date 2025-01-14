@@ -35,7 +35,6 @@ pub trait ILifeSourceManager<TContractState> {
 /// Contract for managing user points and redeeming them as tokens.
 #[starknet::contract]
 mod LifeSourceManager {
-    use core::num::traits::OverflowingMul;
     use core::num::traits::Pow;
     use starknet::storage::StoragePathEntry;
     use starknet::storage::{
@@ -43,7 +42,6 @@ mod LifeSourceManager {
     };
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, ClassHash,
-        get_tx_info,
     };
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
@@ -217,7 +215,6 @@ mod LifeSourceManager {
         fn get_usd_to_token_price(
             ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> u256 {
-            let this_contract = get_contract_address();
             let KEY: felt252 = self.price_oracles.entry(token).read();
             let mut oracle_address: ContractAddress = self.get_oracle_address();
             let (price_of_token_in_usd, price_decimals) = self
