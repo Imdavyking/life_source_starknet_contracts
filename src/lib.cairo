@@ -44,6 +44,7 @@ mod LifeSourceManager {
     };
     use starknet::{
         ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, ClassHash,
+        get_tx_info,
     };
     use starknet::syscalls::deploy_syscall;
     use super::ILifeSourceManager;
@@ -130,6 +131,7 @@ mod LifeSourceManager {
 
     #[constructor]
     fn constructor(ref self: ContractState, class_hash: ClassHash) {
+        let tx_info = get_tx_info();
         let salt = 0;
         let unique = false;
         let mut calldata = array![];
@@ -138,7 +140,7 @@ mod LifeSourceManager {
         self.token_address.write(contract_address);
         self.price_oracles.entry(self.get_strk_address()).write('STRK/USD');
         self.price_oracles.entry(self.get_eth_address()).write('ETH/USD');
-        self.admin.write(get_caller_address());
+        self.admin.write(tx_info.account_contract_address);
     }
 
 
