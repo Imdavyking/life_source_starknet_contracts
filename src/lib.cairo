@@ -213,8 +213,10 @@ mod LifeSourceManager {
             let minTokenAmount = (amount_to_send * (10000 - slippageToleranceBps)) / 10000;
             let maxTokenAmount = (amount_to_send * (10000 + slippageToleranceBps)) / 10000;
 
-            if allowance >= minTokenAmount && allowance <= maxTokenAmount {
-                amount_to_send = allowance;
+            if allowance < amount_to_send {
+                if allowance >= minTokenAmount && allowance <= maxTokenAmount {
+                    amount_to_send = allowance;
+                }
             }
             assert(allowance >= amount_to_send, Errors::LifeSourceManager_INSUFFICIENT_ALLOWANCE);
 
