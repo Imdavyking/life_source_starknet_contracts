@@ -198,7 +198,7 @@ mod LifeSourceManager {
                 .get_token_price(oracle_address, DataType::SpotEntry(KEY));
             let erc_token = IERC20Dispatcher { contract_address: token };
             let allowance = erc_token.allowance(caller, this_contract);
-            let slippageToleranceBps = 200; // 200 basis points = 2%
+            let slippage_tolerance_bps = 200; // 200 basis points = 2%
 
             let token_decimals = erc_token.decimals();
 
@@ -210,11 +210,11 @@ mod LifeSourceManager {
 
             let mut amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
-            let minTokenAmount = (amount_to_send * (10000 - slippageToleranceBps)) / 10000;
-            let maxTokenAmount = (amount_to_send * (10000 + slippageToleranceBps)) / 10000;
+            let min_token_amount = (amount_to_send * (10000 - slippage_tolerance_bps)) / 10000;
+            let max_token_amount = (amount_to_send * (10000 + slippage_tolerance_bps)) / 10000;
 
             if allowance < amount_to_send {
-                if allowance >= minTokenAmount && allowance <= maxTokenAmount {
+                if allowance >= min_token_amount && allowance <= max_token_amount {
                     amount_to_send = allowance;
                 }
             }
