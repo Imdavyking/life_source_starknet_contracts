@@ -127,6 +127,7 @@ mod LifeSourceManager {
     const POINT_BASIS: u256 = 35;
     const ONE_E18: u256 = 1000000000000000000_u256;
     const ONE_E8: u256 = 100000000_u256;
+    const FIAT_DECIMALS: u256 = 100_u256;
 
 
     #[constructor]
@@ -186,7 +187,7 @@ mod LifeSourceManager {
             self.emit(Event::RedeemCode(RedeemCode { user, points_to_redeem }));
         }
 
-
+        // amount_in_usd uses 2 decimal places
         fn donate_to_foundation(
             ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> bool {
@@ -210,7 +211,9 @@ mod LifeSourceManager {
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let mut amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+            let mut amount_to_send: u256 = amount_to_send_numerator
+                / amount_to_send_denominator
+                / FIAT_DECIMALS;
 
             let min_token_amount = (amount_to_send * (10000 - slippage_tolerance_bps)) / 10000;
             let max_token_amount = (amount_to_send * (10000 + slippage_tolerance_bps)) / 10000;
@@ -229,7 +232,7 @@ mod LifeSourceManager {
 
             true
         }
-
+        // amount_in_usd uses 2 decimal places
         fn get_usd_to_token_price(
             ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> u256 {
@@ -247,7 +250,9 @@ mod LifeSourceManager {
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+            let amount_to_send: u256 = amount_to_send_numerator
+                / amount_to_send_denominator
+                / FIAT_DECIMALS;
 
             amount_to_send
         }
