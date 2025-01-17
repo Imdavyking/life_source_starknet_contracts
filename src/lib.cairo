@@ -21,7 +21,7 @@ pub trait ILifeSourceManager<TContractState> {
     ) -> bool;
     /// Get usd to token price.
     fn get_usd_to_token_price(
-        ref self: TContractState, token: ContractAddress, amount_in_usd: u256,
+        self: @TContractState, token: ContractAddress, amount_in_usd: u256,
     ) -> u256;
     /// Withdraw donation.
     fn withdraw_donation(ref self: TContractState, token: ContractAddress, amount: u256) -> bool;
@@ -211,9 +211,9 @@ mod LifeSourceManager {
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let mut amount_to_send: u256 = amount_to_send_numerator
-                / amount_to_send_denominator
-                / FIAT_DECIMALS;
+            let mut amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
+
+            amount_to_send = amount_to_send / FIAT_DECIMALS;
 
             let min_token_amount = (amount_to_send * (10000 - slippage_tolerance_bps)) / 10000;
             let max_token_amount = (amount_to_send * (10000 + slippage_tolerance_bps)) / 10000;
@@ -234,7 +234,7 @@ mod LifeSourceManager {
         }
         // amount_in_usd uses 2 decimal places
         fn get_usd_to_token_price(
-            ref self: ContractState, token: ContractAddress, amount_in_usd: u256,
+            self: @ContractState, token: ContractAddress, amount_in_usd: u256,
         ) -> u256 {
             let KEY: felt252 = self.price_oracles.entry(token).read();
             let mut oracle_address: ContractAddress = self.get_oracle_address();
@@ -250,11 +250,9 @@ mod LifeSourceManager {
 
             let amount_to_send_denominator: u256 = price_of_token_in_usd.into();
 
-            let amount_to_send: u256 = amount_to_send_numerator
-                / amount_to_send_denominator
-                / FIAT_DECIMALS;
+            let amount_to_send: u256 = amount_to_send_numerator / amount_to_send_denominator;
 
-            amount_to_send
+            amount_to_send / FIAT_DECIMALS
         }
 
         fn get_donation(self: @ContractState, token: ContractAddress) -> u256 {
